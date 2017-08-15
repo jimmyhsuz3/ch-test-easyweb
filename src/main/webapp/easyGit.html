@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" type="text/css" href="jquery/themes/default/easyui.css">
+		<link rel="stylesheet" type="text/css" href="jquery/themes/icon.css">
+		<link rel="stylesheet" type="text/css" href="jquery/themes/demo.css">
+		<script type="text/javascript" src="jquery/jquery.min.js"></script>
+		<script type="text/javascript" src="jquery/jquery.easyui.min.js"></script>
+		<style>
+			table{table-layout:fixed;width:100%;}
+			td{vertical-align:top}
+			div.tree-div{border:1px solid blue;width:100%;overflow:auto}
+			pre{margin:0}
+		</style>
+	</head>
+	<body>
+		<input type='text' id='strFrom' value="2017-7-30 0:0:0"/><input type='text' id='strTo'/>
+		<input type='checkbox' id='check1' checked='checked'/><input type='button' value='getRoots' id='btn1'/>
+		<table>
+			<tr>
+				<td width='50%'><div id='div1' class='tree-div'><ul></ul></div></td>
+				<td width='50%'><div id='div2' class='tree-div'></div></td>			
+			</tr>
+		</table>
+	</body>
+<script>
+function NodeUtil(ck){
+	function isArray(a){return Object.prototype.toString.call(a)==='[object Array]';}
+	function get(o,k){
+		k=[].concat(k);
+		var s=k.shift();
+		if(k.length>0)return get(getV(o,s),k);else return getV(o,s);
+		function getV(o,k){return o[isArray(o) ? k*1 : k];}
+	}
+	function getNodes(d,id){
+		var o=get(d,id);
+		if(typeof(o)=='object'){
+			var c=[];
+			var a=isArray(o);
+			for(var i in o){
+				var t=i;//t=key or index
+				if(a){
+					t=o[i];//t
+					if(typeof(t)=='object'){
+						var keys=Object.keys(t);
+						if(keys.length>0)
+							t=keys[0];//t
+						if(t.indexOf('_')==0)
+							continue;
+						if(keys.length==1){
+							i=[i,t];
+							if(ck.checked){
+								c.push({id:[].concat(id).concat(i),text:t});
+								continue;
+							}
+						}
+					}
+				}else{
+					if(isArray(o[i])){
+						for(var i1 in o[i])
+							if(typeof(o[i][i1])=='object'){
+								var keys=Object.keys(o[i][i1]);
+								if(keys.length==1 && keys[0].indexOf('_1')==0)
+									t='['+o[i][i1][keys[0]]+'] '+t.substring(0,6)+' : ';
+							}
+						for(var i1 in o[i])
+							if(typeof(o[i][i1])=='object'){
+								var keys=Object.keys(o[i][i1]);
+								if(keys.length==1 && keys[0].indexOf('_2')==0)
+									t+=o[i][i1][keys[0]];
+							}
+					}
+				}
+				c.push({id:[].concat(id).concat(i),text:t,state:'closed'});
+			}
+			return c;
+		}else{
+			if(o.indexOf('\n')!=-1)
+				o=o.substring(0,o.indexOf('\n'));		
+			return [{id:id,text:o}];
+		}
+	}
+	this.get=get;
+	this.getNodes=getNodes;
+	this.getRoots=function(d){
+		var a=[];
+		for(var i in d)
+			a.push({id:[i],text:i,state:'closed'});
+		return a;
+	}
+	this.renderPre=function(d){
+		var a=d.split('\n');
+		var $d=$('<div></div>');
+		for(var i in a)
+			$d.append($('<pre></pre>').html(a[i].replace(/</g,'&lt;').replace(/>/g,'&gt;'))
+				.css('color',a[i].startsWith('+') ? 'green' : a[i].startsWith('-') ? 'red' : '#aaaaaa')
+				.css('font-weight',a[i].startsWith('+')||a[i].startsWith('-') ? 'bold' : 'normal')
+				.css('background-color',a[i].indexOf('\r')!=-1 ? '#ffffcc':'white'));
+		return $d;
+	}
+	this.fnClick=function(node){
+		if(node.state=='closed')
+			$(this).tree('expand',node.target);
+		else $(this).tree('collapse',node.target);
+		if($(this).tree('isLeaf',node.target))
+			if($(node.target).css('color')=='rgb(0, 0, 0)')
+				$(node.target).css({color:'#FF0000','font-weight':'normal'});
+			else $(node.target).css({color:'#000000','font-weight':'normal'});
+	};
+}
+$(document).ready(function(){
+	(function test(){
+		console.log("typeof({})",typeof({}));
+		console.log("typeof([])",typeof([]));
+		console.log("{}.toString()",{}.toString());
+		console.log("[].toString()",[].toString());
+		console.log("Object.prototype.toString.call([])",Object.prototype.toString.call([]));
+		console.log([0].concat([1,1]).concat([[2],[2,2]]).concat([3,3]));
+		var a=[0,1,2];
+		console.log(a.shift(),a);
+	})();
+	var nodeUtil = new NodeUtil($('#check1').get(0));
+	$('#btn1').click(function(){
+		$.get('test',{strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
+			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({
+				onBeforeExpand:function(node){
+					var thiz = this;
+					$.each($(this).tree('getChildren',node.target),function(){
+						$(thiz).tree('remove',this.target);
+					});
+					$(this).tree('append',{
+			    		parent:node.target,
+			    		data:nodeUtil.getNodes(data,node.id)
+			    	}).tree({onClick:function(node){
+			    		nodeUtil.fnClick.call(this,node);
+			    		if($(this).tree('isLeaf',node.target))
+			    			$('#div2').empty().append(nodeUtil.renderPre(nodeUtil.get(data,node.id)));
+			    	}});
+				}
+			}).tree({onClick:nodeUtil.fnClick});
+		},'json');
+	});
+});
+</script>
+</html>
