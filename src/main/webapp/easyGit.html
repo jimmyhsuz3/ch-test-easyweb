@@ -70,6 +70,7 @@ function NodeUtil(ck){
 								if(keys.length==1 && keys[0].indexOf('_2')==0)
 									t+=o[i][i1][keys[0]];
 							}
+						t=t.replace(/</g,'&lt;').replace(/>/g,'&gt;')
 					}
 				}
 				c.push({id:[].concat(id).concat(i),text:t,state:'closed'});
