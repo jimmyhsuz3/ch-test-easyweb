@@ -16,8 +16,9 @@
 	</head>
 	<body>
 		<input type='text' id='strFrom' value="2017-7-30 0:0:0"/><input type='text' id='strTo'/>
-		<input type='checkbox' id='check1' checked='checked'/><input type='button' value='getRoots' id='btn1'/>
+		<input type='checkbox' id='check1' checked='checked'/><input type='button' value='testByDate' id='btn1'/>
 		<input type='button' value='getGitFileList' id='btn2'/>
+		<input type='button' value='test' id='btn3'/>
 		<input type='button' value='test' id='btnTest'/><hr/>
 		<table border='1'>
 			<tr>
@@ -248,6 +249,13 @@ $(document).ready(function(){
 			}).tree({onClick:nodeUtil.fnClick});
 		},'json');
 	}); //1
+	$('#btn3').click(function(){
+		$.get('test',{action:'test',reset:$('#check1').get(0).checked},
+			function(data){
+				$('#div2').empty().append($('<pre></pre>').html(data));
+			}
+		);
+	});
 	$('#btnTest').click(function(){tabUtil.show();});
 });
 </script>
