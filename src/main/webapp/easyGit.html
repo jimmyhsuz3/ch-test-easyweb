@@ -8,23 +8,29 @@
 		<script type="text/javascript" src="jquery/jquery.min.js"></script>
 		<script type="text/javascript" src="jquery/jquery.easyui.min.js"></script>
 		<style>
-			table{table-layout:fixed;width:100%;}
+			table{table-layout:fixed;width:100%;border-collapse:collapse;}
 			td{vertical-align:top}
-			div.tree-div{border:1px solid blue;width:100%;overflow:auto}
+			div.tree-div{border:2px solid blue;width:99%;overflow:auto}
 			pre{margin:0}
 		</style>
 	</head>
 	<body>
 		<input type='text' id='strFrom' value="2017-7-30 0:0:0"/><input type='text' id='strTo'/>
 		<input type='checkbox' id='check1' checked='checked'/><input type='button' value='getRoots' id='btn1'/>
-		<table>
+		<input type='button' value='getGitFileList' id='btn2'/>
+		<input type='button' value='test' id='btnTest'/><hr/>
+		<table border='1'>
 			<tr>
 				<td width='50%'><div id='div1' class='tree-div'><ul></ul></div></td>
 				<td width='50%'><div id='div2' class='tree-div'></div></td>			
 			</tr>
+			<tr class='test'><td colspan='2'>&nbsp;</td></tr>
 		</table>
 	</body>
 <script>
+// .replace(/</g,'&lt;').replace(/>/g,'&gt;') *4
+// $('#div2').scrollLeft(0).children('div').css('display','inline-block'); *4
+// 2block(-+-+), fnClick, fillRemain, TabUtil, 44
 function NodeUtil(ck){
 	function isArray(a){return Object.prototype.toString.call(a)==='[object Array]';}
 	function get(o,k){
@@ -55,6 +61,16 @@ function NodeUtil(ck){
 								continue;
 							}
 						}
+						if(keys.length==4){
+							if($.inArray('commitId',keys)!=-1 && $.inArray('objectId',keys)!=-1 &&
+									$.inArray('commitTime',keys)!=-1 && $.inArray('fullMessage',keys)!=-1){
+								t='['+o[i]['commitTime']+'] '+o[i]['commitId'].substring(0,6)+'-'+o[i]['objectId'].substring(0,6)+' : '+o[i]['fullMessage'];
+								t=t.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+								i=[i,o[i]['commitId'],o[i]['objectId']];
+								c.push({id:[].concat(id).concat(i),text:t});
+								continue;
+							}
+						}
 					}
 				}else{
 					if(isArray(o[i])){
@@ -71,6 +87,9 @@ function NodeUtil(ck){
 									t+=o[i][i1][keys[0]];
 							}
 						t=t.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+					}else if(typeof(o[i])!='object'){
+						c.push({id:[].concat(id).concat(i),text:t+' = '+o[i]});
+						continue;
 					}
 				}
 				c.push({id:[].concat(id).concat(i),text:t,state:'closed'});
@@ -82,6 +101,7 @@ function NodeUtil(ck){
 			return [{id:id,text:o}];
 		}
 	}
+	// -isArray.+get.-getV.+getNodes
 	this.get=get;
 	this.getNodes=getNodes;
 	this.getRoots=function(d){
@@ -101,6 +121,7 @@ function NodeUtil(ck){
 		return $d;
 	}
 	this.fnClick=function(node){
+		console.log('node.id = ',node.id);
 		if(node.state=='closed')
 			$(this).tree('expand',node.target);
 		else $(this).tree('collapse',node.target);
@@ -109,6 +130,34 @@ function NodeUtil(ck){
 				$(node.target).css({color:'#FF0000','font-weight':'normal'});
 			else $(node.target).css({color:'#000000','font-weight':'normal'});
 	};
+	this.fillRemain=function(){
+		var ds=arguments;
+		if(typeof(fill)=='undefined')
+			if($('body').outerHeight()<$(window).height()-10)
+				(function fill(){
+					$(ds[0]).height($(ds[0]).height()+10);
+					if($('body').outerHeight()<$(window).height()-10)
+						setTimeout(fill,0);
+					else
+						for(var i in ds)
+							$(ds[i]).height($(ds[0]).height());
+				})();
+			else
+				console.log($('body').outerHeight(),$(window).height());
+	};
+}
+function TabUtil(tab,f){
+	var $tr=$(tab).find('tr').hide();
+	this.show=function(c){
+		if(c){
+			$tr.hide().filter(isNaN(c) ? '.'+c : (':nth-child('+c+')')).show();
+			if(f[c.toString()])f[c.toString()]();
+		}else{
+			var n = $tr.each(function(i){if($(this).is(':visible'))c=i+1;}).size();
+			if(!c)c=1;else if(c==n)c=1;else c++;
+			this.show(c);
+		}
+	}
 }
 $(document).ready(function(){
 	(function test(){
@@ -122,8 +171,9 @@ $(document).ready(function(){
 		console.log(a.shift(),a);
 	})();
 	var nodeUtil = new NodeUtil($('#check1').get(0));
+	var tabUtil = new TabUtil($('table').get(0),{'1':function(){nodeUtil.fillRemain($('#div1').get(0),$('#div2').get(0));}});
 	$('#btn1').click(function(){
-		$.get('test',{strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
+		$.get('test',{action:'testByDate',strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
 			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({
 				onBeforeExpand:function(node){
 					var thiz = this;
@@ -136,12 +186,64 @@ $(document).ready(function(){
 			    	}).tree({onClick:function(node){
 			    		nodeUtil.fnClick.call(this,node);
 			    		if($(this).tree('isLeaf',node.target))
+			    		{
 			    			$('#div2').empty().append(nodeUtil.renderPre(nodeUtil.get(data,node.id)));
+			    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
+			    		}
 			    	}});
 				}
 			}).tree({onClick:nodeUtil.fnClick});
 		},'json');
 	});
+	$('#btn2').click(function(){
+		$.get('test',{action:'getGitFileList'},function(data){
+			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({ //1
+				onBeforeExpand:function(node){
+					var thiz = this;
+					$.each($(this).tree('getChildren',node.target),function(){
+						$(thiz).tree('remove',this.target);
+					});
+					$(this).tree('append',{
+			    		parent:node.target,
+			    		data:nodeUtil.getNodes(data,node.id)
+			    	}).tree({onClick:function(node){
+			    		nodeUtil.fnClick.call(this,node);
+			    		if($(this).tree('isLeaf',node.target)) //1
+			    			if(node.id.length==5)
+			    				if($('#check1').get(0).checked){
+					    			var p={action:'getGitFile',
+					    					pathString:node.id[0],
+						    				url:nodeUtil.get(data,[node.id[0],'url']),
+						    				commitId:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2],'commitId']),
+						    				objectId:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2],'objectId'])
+					    			}
+					    			$.get('test',p,function(data){
+						    			$('#div2').empty().append($('<pre></pre>').html(data.replace(/</g,'&lt;').replace(/>/g,'&gt;')));
+						    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
+					    			},'html');
+			    				}else if(nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1])){
+			    					var p={action:'getGitFileDiff',
+						    				pathString:node.id[0],
+							    			url:nodeUtil.get(data,[node.id[0],'url']),
+						    				commitId1:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1,'commitId']),
+						    				commitId2:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2],'commitId'])
+					    			}
+					    			$.get('test',p,function(data){
+						    			$('#div2').empty().append(nodeUtil.renderPre(data));
+						    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
+					    			},'html');
+		    					}else
+		    						$('#div2').empty();
+			    			else{
+			    				$('#div2').empty().append($('<pre></pre>').html(nodeUtil.get(data,node.id)));
+				    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
+			    			}
+			    	}}); //1
+				}
+			}).tree({onClick:nodeUtil.fnClick});
+		},'json');
+	}); //1
+	$('#btnTest').click(function(){tabUtil.show();});
 });
 </script>
 </html>
