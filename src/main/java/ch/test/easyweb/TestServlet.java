@@ -30,5 +30,11 @@ public class TestServlet extends HttpServlet{
 		else if (action.equals("getGitFileDiff"))
 			gitTest.getGitFileDiff(req.getParameter("pathString"), req.getParameter("url"),
 					req.getParameter("commitId1"), req.getParameter("commitId2"), resp.getOutputStream());
+		else if (action.equals("getAllUrl"))
+			resp.getWriter().print(gitTest.getAllUrl());
+		else if (action.equals("fetchLastCommit"))
+			resp.getWriter().print(gitTest.fetchLastCommit(req.getParameter("url")));
+		else if (action.equals("fetchAllLastCommit"))
+			resp.getWriter().print(gitTest.fetchAllLastCommit());
 	}
 }
