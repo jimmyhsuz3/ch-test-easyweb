@@ -12,6 +12,35 @@
 			td{vertical-align:top}
 			div.tree-div{border:2px solid blue;width:99%;overflow:auto}
 			pre{margin:0}
+			.tooltipbox{position:relative;display:inline-block;}
+			.tooltipbox:hover .tooltiptext{
+				visibility:visible;opacity:0;
+				animation-name:example;
+    			animation-duration:1s;
+    			animation-delay:0s;
+			}
+			.tooltipbox .tooltiptext{
+				position:absolute;visibility:hidden;opacity:0;transition:opacity 1s;
+			    left:50%;top:calc(100% + 5px);
+			    margin-left:0px;
+			    border-radius:3px;
+			    padding:3px;
+			    text-align:center;white-space:nowrap;font-size:small;
+			    color: #fff;background-color: #999;
+			    z-index: 1;
+			}
+			.tooltipbox .tooltiptext::after{
+			    content: "";
+			    position:absolute;top:-10px;left:0%;
+			    margin-left:5px;
+			    border-width:5px;
+			    border-style:solid;
+			    border-color:transparent transparent #999 transparent;
+			}
+			@keyframes example{
+				from{visibility:visible;opacity:1;}
+				to{visibility:hidden;opacity:0}
+			}
 		</style>
 	</head>
 	<body>
@@ -26,12 +55,16 @@
 				<td width='50%'><div id='div2' class='tree-div'></div></td>			
 			</tr>
 			<tr class='test'><td colspan='2'>&nbsp;</td></tr>
+			<tr class='allUrl'><td colspan='2'>
+				<input type='button' value='getAllUrl' id='btn4'/><input type='button' value='fetchAllLastCommit' id='btn5' disabled='disabled'/>
+			</td></tr>
 		</table>
 	</body>
 <script>
 // .replace(/</g,'&lt;').replace(/>/g,'&gt;') *4
 // $('#div2').scrollLeft(0).children('div').css('display','inline-block'); *4
 // 2block(-+-+), fnClick, fillRemain, TabUtil, 44
+// .tooltipbox .tooltiptext, $('#btn, https://www.w3schools.com/howto/howto_css_tooltip.asp
 function NodeUtil(ck){
 	function isArray(a){return Object.prototype.toString.call(a)==='[object Array]';}
 	function get(o,k){
@@ -203,6 +236,12 @@ $(document).ready(function(){
 	});
 	$('#btn2').click(function(){
 		$.get('test',{action:'getGitFileList'},function(data){
+			if(data.builder){
+				$('#div1').empty().append('<ul></ul>');
+				for(var i in data.builder)
+					$('#div1>ul').append($('<li></li>').html('{"'+data.builder[i][0]+'", "'+data.builder[i][1]+'"}'));
+				return;
+			}
 			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({ //1
 				onBeforeExpand:function(node){
 					var thiz = this;
@@ -257,6 +296,54 @@ $(document).ready(function(){
 		);
 	});
 	$('#btnTest').click(function(){tabUtil.show();});
+	$('input:button').filter(function(){
+		return $(this).prop('id').startsWith('btn');
+	}).each(function(){
+		$(this).after($('<div class="tooltipbox"><div>').append($('<span class="tooltiptext"></span>').html($(this).prop('id'))))
+			.prependTo($(this).next());
+	});
+	function javaForm(d){
+		var t='';
+		for(var i in d){
+			t+='{"';
+			for(var i1 in d[i]){
+				t+=d[i][i1];
+				if(i1<d[i].length-1)t+='", "'
+			}
+			t+='"}';
+		}
+		return t;
+	}
+	$('#btn4').click(function(){
+		var thiz=this;
+		$.get('test',{action:'getAllUrl'},
+			function(data){
+				for(var i in data)
+					$(thiz).parents('td').first().append(
+						$('<div></div>').append(
+							$('<input type="button" />').val(data[i]).click(function(){
+								var thiz=this;
+								$.get('test',{action:'fetchLastCommit',url:$(this).val()},function(data){
+									$(thiz).next().html(javaForm(data)).css('color',data.length>1?'red':'blue');
+								},'json');
+							})
+						).append('<span></span>')
+					);
+				$(thiz).prop('disabled','disabled');
+				$('#btn5').prop('disabled','');
+			}
+		,'json');
+	});
+	$('#btn5').click(function(){
+		var thiz=this;
+		$.get('test',{action:'fetchAllLastCommit'},
+			function(data){
+				for(var i in data)
+					$(thiz).parents('td').first().find('input[value="'+i+'"]').next().html(javaForm(data[i]))
+						.css('color',data[i].length>1?'red':'blue');
+			}
+		,'json');
+	});
 });
 </script>
 </html>
