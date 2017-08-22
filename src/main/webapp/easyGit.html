@@ -179,6 +179,15 @@ function NodeUtil(ck){
 			else
 				console.log($('body').outerHeight(),$(window).height());
 	};
+	this.absBox=function(msg){
+		var d0="<div style='position:absolute;left:0;top:0;right:0;bottom:0'></div>",
+			d1="<div style='position:absolute;left:50%;top:50%;width:100px;height:100px;margin-left:-50px;margin-top:-50px;border:1px solid red'></div>",
+			d2="<div style='position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed #ccc'></div>",
+			d3="<div style='position:absolute;left:0;top:50%;right:0;border-top:1px dashed #ccc'></div>";
+		$(d1).append(msg).appendTo($(d0).append(d2).append(d3).appendTo($('body'))).mouseout(function(){
+			$(this).parent().animate({opacity:0},1000,function(){$(this).remove();});
+		});
+	}
 }
 function TabUtil(tab,f){
 	var $tr=$(tab).find('tr').hide();
@@ -212,6 +221,7 @@ $(document).ready(function(){
 	var nodeUtil = new NodeUtil($('#check1').get(0));
 	var tabUtil = new TabUtil($('table').get(0),{'1':function(){nodeUtil.fillRemain($('#div1').get(0),$('#div2').get(0));}});
 	$('#btn1').click(function(){
+		$('#div1').empty().append('<ul></ul>'); //*2 + #div1>ul
 		$.get('test',{action:'testByDate',strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
 			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({
 				onBeforeExpand:function(node){
@@ -236,8 +246,8 @@ $(document).ready(function(){
 	});
 	$('#btn2').click(function(){
 		$.get('test',{action:'getGitFileList'},function(data){
+			$('#div1').empty().append('<ul></ul>');
 			if(data.builder){
-				$('#div1').empty().append('<ul></ul>');
 				for(var i in data.builder)
 					$('#div1>ul').append($('<li></li>').html('{"'+data.builder[i][0]+'", "'+data.builder[i][1]+'"}'));
 				return;
@@ -292,6 +302,7 @@ $(document).ready(function(){
 		$.get('test',{action:'test',reset:$('#check1').get(0).checked},
 			function(data){
 				$('#div2').empty().append($('<pre></pre>').html(data));
+				nodeUtil.absBox(data);
 			}
 		);
 	});
