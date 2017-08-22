@@ -65,6 +65,7 @@
 // $('#div2').scrollLeft(0).children('div').css('display','inline-block'); *4
 // 2block(-+-+), fnClick, fillRemain, TabUtil, 44
 // .tooltipbox .tooltiptext, $('#btn, https://www.w3schools.com/howto/howto_css_tooltip.asp
+// http://www.flycan.com/article/css/css-div-position-center-1562.html
 function NodeUtil(ck){
 	function isArray(a){return Object.prototype.toString.call(a)==='[object Array]';}
 	function get(o,k){
@@ -184,8 +185,11 @@ function NodeUtil(ck){
 			d1="<div style='position:absolute;left:50%;top:50%;width:100px;height:100px;margin-left:-50px;margin-top:-50px;border:1px solid red'></div>",
 			d2="<div style='position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed #ccc'></div>",
 			d3="<div style='position:absolute;left:0;top:50%;right:0;border-top:1px dashed #ccc'></div>";
-		$(d1).append(msg).appendTo($(d0).append(d2).append(d3).appendTo($('body'))).mouseout(function(){
+		$(d1).append(msg).appendTo($(d0).append(d2).append(d3).appendTo($('body'))).mouseleave(function(){ //mouseout
 			$(this).parent().animate({opacity:0},1000,function(){$(this).remove();});
+		}).each(function(){
+			$(this).css('width','').css({'white-space':'nowrap','margin-left':-$(this).width()/2});
+			$(this).css('height','').css({'margin-top':-$(this).height()/2});
 		});
 	}
 }
@@ -220,6 +224,32 @@ $(document).ready(function(){
 	})();
 	var nodeUtil = new NodeUtil($('#check1').get(0));
 	var tabUtil = new TabUtil($('table').get(0),{'1':function(){nodeUtil.fillRemain($('#div1').get(0),$('#div2').get(0));}});
+	var error=function(c){
+		return new Function('e',"return function "+c+"(d){return $('<pre></pre>').html(arguments.callee.name+'\\n\\n'+d+'\\n\\n\\n'+e);}");
+	};
+	(function(){
+		var oget=$.get;
+		$.get=function(a,c,d,e){
+			var s={};
+			for(var i in arguments)
+				switch(typeof(arguments[i])){
+					case 'string':
+						if(!s.url)s.url=arguments[i];else s.dataType=arguments[i];
+						break;
+					case 'object':
+						if(!s.data)s.data=arguments[i];
+						break;
+					case 'function':
+						if(!s.success)s.success=arguments[i];
+						else{
+							var error=arguments[i];
+							s.error=function(jqXHR,textStatus,errorThrown){nodeUtil.absBox(error(errorThrown));};
+						}
+						break;
+				}
+			if(s.error)$.ajax(s);else oget.apply(this,arguments);
+		}
+	})();
 	$('#btn1').click(function(){
 		$('#div1').empty().append('<ul></ul>'); //*2 + #div1>ul
 		$.get('test',{action:'testByDate',strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
@@ -304,6 +334,7 @@ $(document).ready(function(){
 				$('#div2').empty().append($('<pre></pre>').html(data));
 				nodeUtil.absBox(data);
 			}
+		,error('test')('#btn3')
 		);
 	});
 	$('#btnTest').click(function(){tabUtil.show();});
