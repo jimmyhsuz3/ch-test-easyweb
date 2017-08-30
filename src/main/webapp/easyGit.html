@@ -48,6 +48,7 @@
 		<input type='checkbox' id='check1' checked='checked'/><input type='button' value='testByDate' id='btn1'/>
 		<input type='button' value='getGitFileList' id='btn2'/>
 		<input type='button' value='test' id='btn3'/>
+		<input type='button' value='cleanClose' id='btn6'/>
 		<input type='button' value='test' id='btnTest'/><hr/>
 		<table border='1'>
 			<tr>
@@ -57,6 +58,9 @@
 			<tr class='test'><td colspan='2'>&nbsp;</td></tr>
 			<tr class='allUrl'><td colspan='2'>
 				<input type='button' value='getAllUrl' id='btn4'/><input type='button' value='fetchAllLastCommit' id='btn5' disabled='disabled'/>
+				<select><option></option></select>
+				<input type='text' id='input1' size='50' value='git@github.com:104corp/104plus-api-proxy.git'/>
+				<div class='ul-div' style='padding:10px'></div>
 			</td></tr>
 		</table>
 	</body>
@@ -221,6 +225,9 @@ $(document).ready(function(){
 			url:'https://github.com/jimmyhsuz3/ch.test.parent.git'},
 			function(data){console.log(data);},
 			'json');
+		function testBind(){return this.x;}
+		var t={x:1,testBind1:testBind,testBind2:testBind.bind({x:2})};
+		console.log('testBind', t.testBind1(), t.testBind2());
 	})();
 	var nodeUtil = new NodeUtil($('#check1').get(0));
 	var tabUtil = new TabUtil($('table').get(0),{'1':function(){nodeUtil.fillRemain($('#div1').get(0),$('#div2').get(0));}});
@@ -264,6 +271,7 @@ $(document).ready(function(){
 			    		data:nodeUtil.getNodes(data,node.id)
 			    	}).tree({onClick:function(node){
 			    		nodeUtil.fnClick.call(this,node);
+						$('#div2').empty();
 			    		if($(this).tree('isLeaf',node.target))
 			    		{
 			    			$('#div2').empty().append(nodeUtil.renderPre(nodeUtil.get(data,node.id)));
@@ -274,11 +282,17 @@ $(document).ready(function(){
 			}).tree({onClick:nodeUtil.fnClick});
 		},'json');
 	});
-	$('#btn2').click(function(){
-		$.get('test',{action:'getGitFileList'},function(data){
+	function Queue(){
+		var q={};
+		this.subscribe=function(name,fun){q[name]=fun;return this;};
+		this.publish=function(name,e){if(q[name])return q[name](e);};
+	};
+	var queue = new Queue().subscribe('getGitFileList',function(data){
+		(function(url,action,func,dataType){func(data);})('test',{action:'getGitFileList'},function(data){
 			$('#div1').empty().append('<ul></ul>');
 			if(data.builder){
 				for(var i in data.builder)
+					// javaForm*6=builder+time.object+function+time.time
 					$('#div1>ul').append($('<li></li>').html('{"'+data.builder[i][0]+'", "'+data.builder[i][1]+'"}'));
 				return;
 			}
@@ -293,6 +307,7 @@ $(document).ready(function(){
 			    		data:nodeUtil.getNodes(data,node.id)
 			    	}).tree({onClick:function(node){
 			    		nodeUtil.fnClick.call(this,node);
+						$('#div2').empty();
 			    		if($(this).tree('isLeaf',node.target)) //1
 			    			if(node.id.length==5)
 			    				if($('#check1').get(0).checked){
@@ -306,11 +321,12 @@ $(document).ready(function(){
 						    			$('#div2').empty().append($('<pre></pre>').html(data.replace(/</g,'&lt;').replace(/>/g,'&gt;')));
 						    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
 					    			},'html');
-			    				}else if(nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1])){
+								}else if(true){
 			    					var p={action:'getGitFileDiff',
 						    				pathString:node.id[0],
 							    			url:nodeUtil.get(data,[node.id[0],'url']),
-						    				commitId1:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1,'commitId']),
+											commitId1:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1]) ?
+												nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2]*1+1,'commitId']) : null,
 						    				commitId2:nodeUtil.get(data,[node.id[0],'commitObjects',node.id[2],'commitId'])
 					    			}
 					    			$.get('test',p,function(data){
@@ -328,6 +344,68 @@ $(document).ready(function(){
 			}).tree({onClick:nodeUtil.fnClick});
 		},'json');
 	}); //1
+	$('#btn2').click(function(){
+		$.get('test',{action:'getGitFileList'},function(data){
+			queue.publish('getGitFileList',data);
+		},'json');
+	});
+	function fetchRepoBranchCommit($td,url){
+		var d='<div style="display:inline-block;height:100%;border:solid 1px blue;overflow:auto;vertical-align:top"></div>',
+		$ul=$('<div style="height:300px;margin-top:5px"></div>').appendTo($td.children('.ul-div').empty().append($('<strong></strong>').html(url))),
+		$ul1=$(d).css('width','60%').appendTo($ul),
+		$ul2=$(d).css('width','39%').appendTo($ul);
+		if(url)
+			$.get('test',{action:'fetchRepoBranchCommit',url:url},function(data){
+				$ul1.append(treeWalk(data,url));
+			},'json');
+		function treeWalk(data,url){
+			var a=[];
+			for(var i in data)
+				a.push({id:{url:url,commitId:data[i][0]},text:i+' '+javaForm([data[i]]),state:'closed'});
+			return $('<ul></ul>').tree().tree('loadData',a)
+				.tree({onClick:function(node){
+					var id={url:node.id.url,pathString:node.id.pathString,commitId:node.id.commitId};
+					$ul2.empty().append(pre(id.url)).append(pre(id.pathString)).append(pre(id.commitId)).append(pre());
+					if(node.state=='closed')
+						if($(this).tree('getChildren',node.target).length)
+							$(this).tree('expand',node.target);
+						else
+							$.get('test',{action:'treeWalkFolder',url:id.url,pathString:id.pathString,commitId:id.commitId},
+								function(data){
+									$(this).tree('append',{
+										parent:node.target,
+										data:treeWalkFolder(data,node.id)
+									}).tree('expand',node.target);
+								}.bind(this),'json');
+					else if($(this).tree('isLeaf',node.target))
+						$.get('test',{action:'getGitFileHis',pathString:id.pathString,url:id.url,commitId:id.commitId},
+							function(data){
+								for(var i in data)
+									$ul2.append(pre(javaForm([[data[i].commitTime],[data[i].commitId,data[i].objectId],[data[i].fullMessage]])));
+								var d={};
+								d[id.pathString]={url:id.url,commitObjects:data};
+								queue.publish('getGitFileList',d);
+						},'json');
+					else
+						$(this).tree('collapse',node.target);
+				}});
+			function treeWalkFolder(data,id){
+				var a=[];
+				for(var i in data){
+					var t=id.pathString ? data[i].substring(data[i].indexOf(id.pathString)+id.pathString.length) : data[i];
+					a.push({id:{url:id.url,pathString:data[i],commitId:id.commitId},text:t,state:t.endsWith('/')?'closed':''});
+				}
+				a.sort(function(a,b){
+					a=a.text;
+					b=b.text;
+					if(a.endsWith('/'))if(b.endsWith('/'))return a>b?1:a==b?0:-1;else return -1;
+					else if(b.endsWith('/'))return 1;else return a>b?1:a==b?0:-1;
+				});
+				return a;
+			};
+			function pre(html){return $('<pre></pre>').html(html?html:'&nbsp;');};
+		}
+	}
 	$('#btn3').click(function(){
 		$.get('test',{action:'test',reset:$('#check1').get(0).checked},
 			function(data){
@@ -365,6 +443,7 @@ $(document).ready(function(){
 						$('<div></div>').append(
 							$('<input type="button" />').val(data[i]).click(function(){
 								var thiz=this;
+								$(thiz).next().html(''); //span.empty
 								$.get('test',{action:'fetchLastCommit',url:$(this).val()},function(data){
 									$(thiz).next().html(javaForm(data)).css('color',data.length>1?'red':'blue');
 								},'json');
@@ -373,11 +452,19 @@ $(document).ready(function(){
 					);
 				$(thiz).prop('disabled','disabled');
 				$('#btn5').prop('disabled','');
+				var $td=$(thiz).parents('td').first();
+				$td.children('select').change(function(){
+					fetchRepoBranchCommit($td,$(this).children('option:selected').text());
+				}).each(function(){
+					for(var i in data)
+						$(this).append($('<option></option>').html(data[i]));
+				});
 			}
 		,'json');
 	});
 	$('#btn5').click(function(){
 		var thiz=this;
+		$(thiz).parents('td').first().find('input').next('span').html(''); //span.empty
 		$.get('test',{action:'fetchAllLastCommit'},
 			function(data){
 				for(var i in data)
@@ -385,6 +472,13 @@ $(document).ready(function(){
 						.css('color',data[i].length>1?'red':'blue');
 			}
 		,'json');
+	});
+	$('#input1').keypress(function(e){
+		if((e.keyCode ? e.keyCode : e.which)==13)
+			fetchRepoBranchCommit($(this).parents('td').first(),$(this).val());
+	});
+	$('#btn6').click(function(){
+		$.get('test',{action:'cleanClose'},function(d){nodeUtil.absBox(d);},error('cleanClose')('#btn6'));
 	});
 });
 </script>

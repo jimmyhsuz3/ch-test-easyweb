@@ -23,7 +23,7 @@ public class TestServlet extends HttpServlet{
 		else if (action.equals("getGitFileList"))
 			resp.getWriter().print(gitTest.getGitFileList());
 		else if (action.equals("getGitFileHis"))
-			resp.getWriter().print(gitTest.getGitFileHis(req.getParameter("pathString"), req.getParameter("url")));
+			resp.getWriter().print(gitTest.getGitFileHis(req.getParameter("pathString"), req.getParameter("url"), req.getParameter("commitId")));
 		else if (action.equals("getGitFile"))
 			gitTest.getGitFile(req.getParameter("pathString"), req.getParameter("url"),
 					req.getParameter("commitId"), req.getParameter("objectId"), resp.getOutputStream());
@@ -36,5 +36,11 @@ public class TestServlet extends HttpServlet{
 			resp.getWriter().print(gitTest.fetchLastCommit(req.getParameter("url")));
 		else if (action.equals("fetchAllLastCommit"))
 			resp.getWriter().print(gitTest.fetchAllLastCommit());
+		else if (action.equals("fetchRepoBranchCommit"))
+			resp.getWriter().print(gitTest.fetchRepoBranchCommit(req.getParameter("url")));
+		else if (action.equals("treeWalkFolder"))
+			resp.getWriter().print(gitTest.treeWalkFolder(req.getParameter("url"), req.getParameter("pathString"), req.getParameter("commitId")));
+		else if (action.equals("cleanClose"))
+			resp.getWriter().print(gitTest.cleanClose());
 	}
 }
