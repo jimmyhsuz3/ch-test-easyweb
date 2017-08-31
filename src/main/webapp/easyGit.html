@@ -62,6 +62,37 @@
 				<input type='text' id='input1' size='50' value='git@github.com:104corp/104plus-api-proxy.git'/>
 				<div class='ul-div' style='padding:10px'></div>
 			</td></tr>
+			<tr>
+				<td>
+<form id='getGitFileListForm1'>
+<input type='button' value='getGitFileList*3(list)'/>
+</form>
+<form id='getGitFileListForm2'>
+<input type='text' name='pathString' size='50' value='parent/simpleweb/src/main/java/simpleweb/TestServlet.java'/><br/>
+<input type='text' name='url' size='50' value='https://github.com/jimmyhsuz3/ch.test.parent.git'/><br/>
+<input type='text' name='commitId' size='50' />
+<input type='button' value='getGitFileList*3(his2)'/>
+</form>
+<form id='fetchRepoBranchCommitForm'>
+<input type='text' name='url' size='50' value='git@github.com:104corp/104plus-api-proxy.git'/>
+<input type='button' value='fetchRepoBranchCommit*2'/>
+</form>
+<pre>
+pathString*4.important-1.optional+his2.list
+getGitFileList*3(list,his.commitId,his.null)+fetchRepoBranchCommit*2
+
+[2017-08-29 18:00:20]*15
+[2017-08-30 15:46:04]*14
+
+easyweb=8-15-6
+DiffEntry[ADD
+HsitoryManager=5
+/dev/null
+ProfileSearchEngineTest=11
+</pre>
+				</td>
+				<td>&nbsp;</td>
+			</tr>
 		</table>
 	</body>
 <script>
@@ -113,19 +144,27 @@ function NodeUtil(ck){
 					}
 				}else{
 					if(isArray(o[i])){
+						var len=o[i].length;
 						for(var i1 in o[i])
 							if(typeof(o[i][i1])=='object'){
 								var keys=Object.keys(o[i][i1]);
 								if(keys.length==1 && keys[0].indexOf('_1')==0)
+								{
 									t='['+o[i][i1][keys[0]]+'] '+t.substring(0,6)+' : ';
+									len--;
+								}
 							}
 						for(var i1 in o[i])
 							if(typeof(o[i][i1])=='object'){
 								var keys=Object.keys(o[i][i1]);
 								if(keys.length==1 && keys[0].indexOf('_2')==0)
+								{
 									t+=o[i][i1][keys[0]];
+									len--;
+								}
 							}
 						t=t.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+						+' ['+len+']';
 					}else if(typeof(o[i])!='object'){
 						c.push({id:[].concat(id).concat(i),text:t+' = '+o[i]});
 						continue;
@@ -146,7 +185,7 @@ function NodeUtil(ck){
 	this.getRoots=function(d){
 		var a=[];
 		for(var i in d)
-			a.push({id:[i],text:i,state:'closed'});
+			a.push({id:[i],text:i,state:Object.keys(d[i]).length?'closed':''});
 		return a;
 	}
 	this.renderPre=function(d){
@@ -201,14 +240,27 @@ function TabUtil(tab,f){
 	var $tr=$(tab).find('tr').hide();
 	this.show=function(c){
 		if(c){
+			var $trs=
 			$tr.hide().filter(isNaN(c) ? '.'+c : (':nth-child('+c+')')).show();
 			if(f[c.toString()])f[c.toString()]();
+			return $trs;
 		}else{
 			var n = $tr.each(function(i){if($(this).is(':visible'))c=i+1;}).size();
 			if(!c)c=1;else if(c==n)c=1;else c++;
 			this.show(c);
 		}
 	}
+}
+function query(t){
+	var s=window.location.search.substring(1).split('&');
+	for(var i in s){
+		var p=s[i].split('=');
+		if(p[0] == t)return p[1];
+	}
+}
+function getDay(t){
+	var d=new Date(new Date().getTime()-t*1000*60*60*24);
+	return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+' 0:0:0';
 }
 $(document).ready(function(){
 	(function test(){
@@ -257,6 +309,9 @@ $(document).ready(function(){
 			if(s.error)$.ajax(s);else oget.apply(this,arguments);
 		}
 	})();
+	(function(){
+		$('#strFrom').val(getDay(query('t')));
+	})();
 	$('#btn1').click(function(){
 		$('#div1').empty().append('<ul></ul>'); //*2 + #div1>ul
 		$.get('test',{action:'testByDate',strFrom:$('#strFrom').val(),strTo:$('#strTo').val()},function(data){
@@ -277,6 +332,9 @@ $(document).ready(function(){
 			    			$('#div2').empty().append(nodeUtil.renderPre(nodeUtil.get(data,node.id)));
 			    			$('#div2').scrollLeft(0).children('div').css('display','inline-block');
 			    		}
+			    	},onDblClick:function(node){
+			    		// getGitFileList*3(his.null)
+			    		queue.publish('form',{form:'getGitFileListForm2',pathString:/ (.+)]/.exec(node.id[3])[1],url:node.id[0]});
 			    	}});
 				}
 			}).tree({onClick:nodeUtil.fnClick});
@@ -287,16 +345,22 @@ $(document).ready(function(){
 		this.subscribe=function(name,fun){q[name]=fun;return this;};
 		this.publish=function(name,e){if(q[name])return q[name](e);};
 	};
-	var queue = new Queue().subscribe('getGitFileList',function(data){
+	var queue = new Queue().subscribe('getGitFileList',function(e){
+		var data=e.data,append=e.append;
 		(function(url,action,func,dataType){func(data);})('test',{action:'getGitFileList'},function(data){
+			var $ul;
+			if(!append){
 			$('#div1').empty().append('<ul></ul>');
+				$ul=$('#div1>ul');
+			}else
+				$ul=$('<ul></ul>').appendTo($('#div1').append('<hr/>'));
 			if(data.builder){
 				for(var i in data.builder)
 					// javaForm*6=builder+time.object+function+time.time
 					$('#div1>ul').append($('<li></li>').html('{"'+data.builder[i][0]+'", "'+data.builder[i][1]+'"}'));
 				return;
 			}
-			$('#div1>ul').empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({ //1
+			$ul.empty().tree().tree('loadData',nodeUtil.getRoots(data)).tree({ //1
 				onBeforeExpand:function(node){
 					var thiz = this;
 					$.each($(this).tree('getChildren',node.target),function(){
@@ -345,9 +409,12 @@ $(document).ready(function(){
 		},'json');
 	}); //1
 	$('#btn2').click(function(){
+		queue.publish('form',{form:'getGitFileListForm1'});
+/*		getGitFileList*3(list)
 		$.get('test',{action:'getGitFileList'},function(data){
 			queue.publish('getGitFileList',data);
 		},'json');
+*/
 	});
 	function fetchRepoBranchCommit($td,url){
 		var d='<div style="display:inline-block;height:100%;border:solid 1px blue;overflow:auto;vertical-align:top"></div>',
@@ -384,11 +451,17 @@ $(document).ready(function(){
 									$ul2.append(pre(javaForm([[data[i].commitTime],[data[i].commitId,data[i].objectId],[data[i].fullMessage]])));
 								var d={};
 								d[id.pathString]={url:id.url,commitObjects:data};
+/*
 								queue.publish('getGitFileList',d);
+*/
 						},'json');
 					else
 						$(this).tree('collapse',node.target);
-				}});
+				},onDblClick:function(node){
+					// getGitFileList*3(his.commitId)
+					if($(this).tree('isLeaf',node.target))
+		    			queue.publish('form',{form:'getGitFileListForm2',pathString:node.id.pathString,url:node.id.url,commitId:node.id.commitId});
+		    	}});
 			function treeWalkFolder(data,id){
 				var a=[];
 				for(var i in data){
@@ -480,6 +553,35 @@ $(document).ready(function(){
 	$('#btn6').click(function(){
 		$.get('test',{action:'cleanClose'},function(d){nodeUtil.absBox(d);},error('cleanClose')('#btn6'));
 	});
+	(function(){
+		$('#getGitFileListForm1>input:button').click(function(){
+			$.get('test',{action:'getGitFileList'},function(data){
+				queue.publish('getGitFileList',{data:data});
+			},'json');
+			tabUtil.show(1);
+		});
+		$('#getGitFileListForm2>input:button').click(function(){
+			var id={pathString:this.form.pathString.value,url:this.form.url.value,commitId:this.form.commitId.value};
+			$.get('test',{action:'getGitFileHis',pathString:id.pathString,url:id.url,commitId:id.commitId},
+				function(data){
+					var d={};
+					d[id.pathString]={url:id.url,commitObjects:data};
+					queue.publish('getGitFileList',{data:d,append:true});
+					tabUtil.show(1);
+			}.bind(this),'json');
+		});
+		$('#fetchRepoBranchCommitForm>input:button').click(function(){
+			fetchRepoBranchCommit(tabUtil.show('allUrl').children('td').eq(0),this.form.url.value);
+		});
+		queue.subscribe('form',function(e){
+			var $form=$($('#'+e.form).get(0));
+			$form.children('input').each(function(){
+				if(this.name)
+					$(this).val(e[this.name]);
+			});
+			$form.children('input:button').trigger('click');
+		});
+	})();
 });
 </script>
 </html>
