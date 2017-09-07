@@ -42,5 +42,28 @@ public class TestServlet extends HttpServlet{
 			resp.getWriter().print(gitTest.treeWalkFolder(req.getParameter("url"), req.getParameter("pathString"), req.getParameter("commitId")));
 		else if (action.equals("cleanClose"))
 			resp.getWriter().print(gitTest.cleanClose());
+		else if (action.equals("getPage")){
+			resp.setHeader("Content-Type", "text/html; charset=utf-8");
+			write(resp.getOutputStream(), "META-INF/html/" + req.getParameter("html"));
+		}
+	}
+	private void write(java.io.OutputStream os, String resource){
+		java.io.InputStream is = null;
+		try {
+			is = getClass().getClassLoader().getResourceAsStream(resource);
+			byte[] b = new byte[8192];
+			int len = 0;
+			while ((len = is.read(b)) != -1)
+				os.write(b, 0, len);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} finally {
+			if (is != null)
+				try {
+					is.close();
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+		}
 	}
 }

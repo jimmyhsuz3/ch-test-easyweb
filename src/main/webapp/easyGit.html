@@ -163,6 +163,24 @@ function NodeUtil(ck){
 									len--;
 								}
 							}
+						for(var i1 in o[i])
+							if(typeof(o[i][i1])=='object'){
+								var keys=Object.keys(o[i][i1]);
+								if(keys.length==1 && keys[0].indexOf('_3')==0)
+								{
+									t+=o[i][i1][keys[0]];
+									len--;
+								}
+							}
+						for(var i1 in o[i])
+							if(typeof(o[i][i1])=='object'){
+								var keys=Object.keys(o[i][i1]);
+								if(keys.length==1 && keys[0].indexOf('_4')==0)
+								{
+									t+=o[i][i1][keys[0]];
+									len--;
+								}
+							}
 						t=t.replace(/</g,'&lt;').replace(/>/g,'&gt;')
 						+' ['+len+']';
 					}else if(typeof(o[i])!='object'){
